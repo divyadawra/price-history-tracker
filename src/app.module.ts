@@ -6,9 +6,11 @@ import { ProductModule } from './product/product.module';
 import { DataSource } from 'typeorm';
 
 import { SourcesModule } from './sources/sources.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ProductModule,
     SourcesModule,
     TypeOrmModule.forRoot({
@@ -17,7 +19,7 @@ import { SourcesModule } from './sources/sources.module';
       port: 3306,
       username: 'root',
       password: '',
-      database: 'ProductHistory',
+      database: 'product_history',
       // synchronize: true,
       autoLoadEntities: true
     })],
