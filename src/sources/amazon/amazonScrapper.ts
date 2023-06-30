@@ -1,46 +1,30 @@
-var osmosis = require('osmosis');
-import {Amazon} from './amazon.entity';
+const cheerio = require('cheerio');
+const axios = require('axios'); 
 
-const scrape = async (url) => {
-    var scrappedProduct = new Amazon();
- 
-    scrappedProduct.url = url;
 
-    console.log('init');
-    osmosis.get(url)
-    .find('div#titleSection')
-    .set('name', 'span#productTitle')
-    .find('div#corePriceDisplay_desktop_feature_div')
-    .set({'price': 'span.a-offscreen'})
-    .find('div#averageCustomerReviews')
-    .set({'ratingCount': 'span#acrCustomerReviewText',
-        'rating': 'span.reviewCountTextLinkedHistogram'})
-    .find('div#availabilityInsideBuyBox_feature_div')
-    .set({
-        'inStock':'div#availability'
-    })
-    .data(function(result) {
+const scrapeUrl = async (url) => {
+    console.log("url: ", url);
+  return await axios.get(url).then(async (response) => { 
+        const body = response.data; 
+        const $ = cheerio.load(body); // Load HTML data and initialize cheerio 
+       return await getProductDetails($) 
+    });
+} 
 
-        for (const key in result) {
-            if (scrappedProduct.hasOwnProperty(key)) {
-              console.log(`${key}: ${result[key]}`);
-            }
-          }
-        console.log(result);
-        // result.
-        scrappedProduct.name = result.name;
+const getProductDetails = async ($) => {
 
-        // AmazonService.saveProduct()
+    let title = $('.product-title-word-break').text();
+    let inStock = $('#availability').text();
+    let price, ratingCount, rating = '';
 
-    }).done(
+    if (inStock.indexOf('Currently unavailable')) {
+        price = $('.priceToPay').find('.a-price-whole').text();
+        ratingCount = $('#acrCustomerReviewText').text();
+        rating = $('.reviewCountTextLinkedHistogram').attr('title');
+    }
 
-    );
+    return {name: title.trim(), price: price, rating:rating , ratingCount: ratingCount, inStock: inStock.trim(), priceFetchedAt: (new Date()).toLocaleString()};
 }
 
-// https://www.amazon.in/AYSIS-Double-Crawling-Resistant-Biggest/dp/B08KF591QD
-// https://www.amazon.in/Redmi-Sea-Green-32GB-Storage/dp/B0C46H59YD
-// https://www.amazon.in/Pikify-Standing-Bathroom-Cosmetic-Organizer/dp/B0C14DRW53
-// https://www.amazon.in/Stylum-Womens-Kantha-Cotton-Purple/dp/B0BTYSNF76
-// https://www.amazon.in/dp/B07PFFMP9P
 
-scrape('https://www.amazon.in/Pikify-Standing-Bathroom-Cosmetic-Organizer/dp/B0C14DRW53')
+module.exports = scrapeUrl;
