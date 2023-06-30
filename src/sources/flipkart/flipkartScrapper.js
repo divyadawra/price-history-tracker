@@ -29,8 +29,9 @@ const getProductDetails = async ($) => {
         ratingCount = $('._2_R_DZ').text();
     } 
 
-    let inStock = 'Available'
-    return {name: title, price: price, rating:rating , ratingCount: ratingCount, inStock: inStock};
+    let inStock = 'Available';
+    let priceFetchedAt = (new Date()).toLocaleString();
+    return {name: title, price: price, rating:rating , ratingCount: ratingCount, inStock: inStock, priceFetchedAt: priceFetchedAt};
 }
 
 module.exports = scrapeUrl;
