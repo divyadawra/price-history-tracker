@@ -27,12 +27,13 @@ export class AmazonService {
   }
 
  async scrapeAndSaveProduct(url:string): Promise<string> {
-    let product = new Product();
-    product = await this.productService.getProductByName(url);
+   
+    let product = await this.productService.getProductByName(url);
    
     let scrapedProduct = await scrapeUrl(url);
      
     if (!product) {
+      product = new Product();
       product.name = url;
       product.description = scrapedProduct.name;
       product = await this.productService.saveProduct(product);
