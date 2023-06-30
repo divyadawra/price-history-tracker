@@ -1,17 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Amazon } from './amazon.entity';
-var osmosis = require('osmosis');
+var scrapeUrl = require('./amazonScrapper');
+import { Product } from 'src/product/product.entity';
+import { ProductService } from 'src/product/product.service';
+import { Cron } from '@nestjs/schedule';
+
 
 @Injectable()
 export class AmazonService {
 
     constructor(
         @InjectRepository(Amazon)
-        private amazonRepository: Repository<Amazon>, 
-        private dataSource: DataSource
+        private amazonRepository: Repository<Amazon>,
+        private readonly productService: ProductService
       ) {}
+    
+      
   getProduct(id:number): Promise<Amazon | null> {
     return this.amazonRepository.findOneBy({ id });
   }
@@ -21,81 +27,35 @@ export class AmazonService {
   }
 
  async scrapeAndSaveProduct(url:string): Promise<string> {
-    scrapeUrl(url).then(data => {
-      console.log('data', data);
-      this.amazonRepository.save(data);
-    });
-    // var scrappedProduct = await this.scrapeUrl(url);
-    // console.log(" in scrape and save product", scrappedProduct);
-    // await this.saveProduct(scrappedProduct);
-    return "hello";
+    let product = new Product();
+    product = await this.productService.getProductByName(url);
+   
+    let scrapedProduct = await scrapeUrl(url);
+     
+    if (!product) {
+      product.name = url;
+      product.description = scrapedProduct.name;
+      product = await this.productService.saveProduct(product);
+    }   
+    console.log(product);
+    scrapedProduct.url = url;
+    scrapedProduct.pid = product.id;
+    await this.amazonRepository.save(scrapedProduct);
+    return scrapedProduct;
   }
 
- async scrapeUrltest(url:string): Promise<Amazon> {
-    var scrappedProduct = new Amazon();
-    scrappedProduct['url'] = url;
-    scrappedProduct['pid']=1;
-    console.log('init');
-   scrappedProduct = await osmosis.get(url)
-    .find('div#titleSection')
-    .set('name', 'span#productTitle')
-    .find('div#corePriceDisplay_desktop_feature_div')
-    .set({'price': 'span.a-offscreen'})
-    .find('div#averageCustomerReviews')
-    .set({'ratingCount': 'span#acrCustomerReviewText',
-        'rating': 'span.reviewCountTextLinkedHistogram'})
-    .find('div#availabilityInsideBuyBox_feature_div')
-    .set({
-        'inStock':'div#availability'
-    })
-    .data(function(result) {
-      console.log("here");
-      for(const key in result) {
-        console.log(`${key}: ${result[key]}`);
-          scrappedProduct[key] = result[key]
+  @Cron('* * 10 * * *')
+  async scrapeCronJob() {
+    console.log('AMAZON: Cron Job started');
+    let products = await this.productService.getAllProducts();
+    products.forEach(async (product) => {
+      let url= product.name;
+      console.log(url);
+      if (url !="" && url.indexOf('amazon')) {
+        await this.scrapeAndSaveProduct(url);
       }
-    }).done( () => {
-      console.log("in done", scrappedProduct);
-      return scrappedProduct;
-    });
 
-    console.log("at line 57 ",scrappedProduct);
-    return scrappedProduct;
+    });
+    console.log('AMAZON: Cron Job finished');
   }
 }
-
-
-function scrapeUrl(url) {
-  console.log("in 1");
-  return new Promise((resolve, reject) => {
-    var scrappedProduct = new Amazon();
-    scrappedProduct['url'] = url;
-    let results = [];
-    osmosis.get(url)
-    .find('div#titleSection')
-    .set('name', 'span#productTitle')
-    .find('div#corePriceDisplay_desktop_feature_div')
-    .set({'price': 'span.a-offscreen'})
-    .find('div#averageCustomerReviews')
-    .set({'ratingCount': 'span#acrCustomerReviewText',
-        'rating': 'span.reviewCountTextLinkedHistogram'})
-    .find('div#availabilityInsideBuyBox_feature_div')
-    .set({
-        'inStock':'div#availability'
-    })
-      .data(result => {
-        for(const key in result) {
-          console.log(`${key}: ${result[key]}`);
-            if (key == 'rating'){
-              var splitStr = result[key].split(' ');
-              console.log("splitstr:", splitStr);
-              result[key] = splitStr[0];
-              console.log(result[key]);
-            }
-            scrappedProduct[key] = result[key]
-        }
-      })
-      .done(() => resolve(scrappedProduct));
-  });
-}
-
