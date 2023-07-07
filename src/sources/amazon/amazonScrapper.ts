@@ -22,9 +22,16 @@ const getProductDetails = async ($) => {
         ratingCount = $('#acrCustomerReviewText').text();
         rating = $('.reviewCountTextLinkedHistogram').attr('title');
     }
-
-    return {name: title.trim(), price: price, rating:rating , ratingCount: ratingCount, inStock: inStock.trim(), priceFetchedAt: (new Date()).toLocaleString()};
+    let data = {name: title, price: price, rating:rating , ratingCount: ratingCount, inStock: inStock};
+    return await sanitizeScrapedData(data);
 }
+const sanitizeScrapedData = async function(data) {
+        data.name = data.name.trim();
+        data.price = data.price ? parseFloat(data.price).toFixed(2): null;
+        data.inStock = data.inStock ? data.inStock.trim(): null;
+        return data;
+}
+
 
 
 module.exports = scrapeUrl;
