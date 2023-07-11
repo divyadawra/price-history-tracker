@@ -30,8 +30,19 @@ const getProductDetails = async ($) => {
     } 
 
     let inStock = 'Available';
-    let priceFetchedAt = (new Date()).toLocaleString();
-    return {name: title, price: price, rating:rating , ratingCount: ratingCount, inStock: inStock, priceFetchedAt: priceFetchedAt};
+    let data = {name: title, price: price, rating:rating , ratingCount: ratingCount, inStock: inStock};
+    return await sanitizeScrapedData(data);
 }
 
+const sanitizeScrapedData = async function(data) {
+    data.name = data.name.trim();
+    if(data.price) {
+       data.price = data.price.replace(/[,\u20b9]/g, "");
+       console.log(data.price);
+       data.price = parseFloat(data.price).toFixed(2);
+       console.log(data.price);
+    }
+    data.inStock = data.inStock ? data.inStock.trim(): null;
+    return data;
+}
 module.exports = scrapeUrl;

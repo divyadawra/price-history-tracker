@@ -8,8 +8,7 @@ export class SourcesService {
 
     constructor(
         @InjectRepository(Sources)
-        private sourcesRepository: Repository<Sources>, 
-        private dataSource: DataSource
+        private sourcesRepository: Repository<Sources>
       ) {}
   getProduct(id:number): Promise<Sources | null> {
     return this.sourcesRepository.findOneBy({ id });
